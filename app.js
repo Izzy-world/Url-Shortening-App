@@ -13,16 +13,19 @@ const navLinks = document.querySelector('.nav-links');
 // Constants
 const STORAGE_KEY = 'shortenedUrls';
 const MAX_HISTORY = 10;
+const REQUEST_COOLDOWN = 2000; // 2 seconds
 let lastRequestTime = 0;
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', initApp);
+
+function initApp() {
   renderUrlList();
   setupMobileMenu();
   setupEventListeners();
-});
+}
 
-// Event Listeners Setup
+// Event Listeners
 function setupEventListeners() {
   form.addEventListener('submit', handleFormSubmit);
   clearHistoryBtn.addEventListener('click', handleClearHistory);
@@ -56,55 +59,63 @@ async function handleFormSubmit(e) {
   
   const url = input.value.trim();
   
+  // Validation checks
   if (!url) {
     showError("Please add a link");
     return;
   }
 
+  if (!isValidUrl(url)) {
+    showError("Please enter a valid URL (e.g., https://example.com)");
+    return;
+  }
+
+  // Request cooldown check
+  const now = Date.now();
+  if (now - lastRequestTime < REQUEST_COOLDOWN) {
+    showError("Please wait before submitting again");
+    return;
+  }
+  lastRequestTime = now;
+
   try {
+    // Show loading state
     toggleLoading(true);
-    const shortenedUrl = await shortenUrlWithRetry(url);
+    
+    // Small delay to ensure spinner is visible
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    const shortenedUrl = await shortenUrl(url);
     saveUrl(url, shortenedUrl);
     renderUrlList();
     input.value = '';
+    showToast('URL shortened successfully!');
   } catch (error) {
-    showError(error.message);
+    console.error('Shortening error:', error);
+    showError(error.message || "Failed to shorten URL. Please try another URL or try again later.");
   } finally {
     toggleLoading(false);
   }
 }
 
-// Clear error when typing
-function clearErrorOnType() {
-  if (input.value.trim() !== '') {
-    resetFormState();
-  }
-}
-
-// URL Shortening
-async function shortenUrlWithRetry(url, retries = 2) {
-  try {
-    return await shortenUrl(url);
-  } catch (error) {
-    if (retries <= 0) throw error;
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return await shortenUrlWithRetry(url, retries - 1);
-  }
-}
-
+// URL Shortening with TinyURL
 async function shortenUrl(url) {
-  const now = Date.now();
-  if (now - lastRequestTime < 1000) {
-    throw new Error("Please wait a moment before shortening another link");
-  }
-  lastRequestTime = now;
-
   try {
-    const response = await fetch(`https://api.shrtco.de/v2/shorten?url=${encodeURIComponent(url)}`);
-    const data = await response.json();
-    return data.result.full_short_link;
+    const apiUrl = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`;
+    const response = await fetch(apiUrl);
+
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    
+    const result = await response.text();
+    
+    if (!result.startsWith("https://tinyurl.com/")) {
+      throw new Error("Invalid response from TinyURL");
+    }
+    
+    return result;
   } catch (error) {
-    throw new Error("Failed to shorten URL. Please try again.");
+    console.error("Shorten Error:", error);
+    throw new Error("Failed to shorten URL. Please try again later.");
   }
 }
 
@@ -113,6 +124,7 @@ function handleClearHistory() {
   if (confirm("Clear all shortened links?")) {
     localStorage.removeItem(STORAGE_KEY);
     renderUrlList();
+    showToast('History cleared successfully!');
   }
 }
 
@@ -127,31 +139,44 @@ function renderUrlList() {
   }
 
   clearHistoryBtn.style.display = 'block';
-
-  savedUrls.forEach(url => {
-    const card = document.createElement('div');
-    card.className = 'result-card';
-    card.innerHTML = `
-      <p class="original-url">${truncateText(url.original, 40)}</p>
-      <div class="result-right">
-        <a href="${url.shortened}" target="_blank" class="shortened-url">${url.shortened}</a>
-        <button class="btn btn-square copy-btn" data-url="${url.shortened}">
-          <span class="btn-text">Copy</span>
-        </button>
-      </div>
-    `;
-    resultsContainer.appendChild(card);
-  });
+  resultsContainer.append(...savedUrls.map(createUrlCard));
 }
 
+function createUrlCard(url) {
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  card.innerHTML = `
+    <p class="original-url">${truncateText(url.original, 40)}</p>
+    <div class="result-right">
+      <a href="${url.shortened}" target="_blank" class="shortened-url">${url.shortened}</a>
+      <button class="btn btn-square copy-btn" data-url="${url.shortened}">
+        <span class="btn-text">Copy</span>
+        <span class="copied-text">Copied!</span>
+      </button>
+    </div>
+  `;
+  return card;
+}
+
+// Storage Functions
 function getSavedUrls() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
 }
 
 function saveUrl(original, shortened) {
   const history = getSavedUrls();
-  const newItem = { original, shortened, id: Date.now() };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([newItem, ...history].slice(0, MAX_HISTORY)));
+  const newItem = { 
+    original, 
+    shortened, 
+    id: Date.now(),
+    timestamp: new Date().toISOString() 
+  };
+  const updatedHistory = [newItem, ...history].slice(0, MAX_HISTORY);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
 }
 
 // Copy Functionality
@@ -169,24 +194,45 @@ async function copyToClipboard(url, copyBtn) {
     showToast("Copied to clipboard!");
     updateCopyButtonState(copyBtn);
   } catch (err) {
-    showToast("Failed to copy");
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = url;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast("Copied to clipboard!");
+    updateCopyButtonState(copyBtn);
   }
 }
 
 function updateCopyButtonState(copyBtn) {
   copyBtn.classList.add('copied');
-  copyBtn.querySelector('.btn-text').textContent = 'Copied!';
   setTimeout(() => {
     copyBtn.classList.remove('copied');
-    copyBtn.querySelector('.btn-text').textContent = 'Copy';
   }, 2000);
 }
 
 // Helper Functions
+function isValidUrl(url) {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function showError(message) {
   errorEl.textContent = message;
   errorEl.classList.add('active');
   input.classList.add('invalid');
+}
+
+function clearErrorOnType() {
+  if (errorEl.classList.contains('active')) {
+    resetFormState();
+  }
 }
 
 function resetFormState() {
