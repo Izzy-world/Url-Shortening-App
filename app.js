@@ -83,7 +83,7 @@ async function handleFormSubmit(e) {
     toggleLoading(true);
     
     // Small delay to ensure spinner is visible
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     const shortenedUrl = await shortenUrl(url);
     saveUrl(url, shortenedUrl);
@@ -225,19 +225,19 @@ function isValidUrl(url) {
 
 function showError(message) {
   errorEl.textContent = message;
-  errorEl.classList.add('active');
+  errorEl.classList.add('visible');
   input.classList.add('invalid');
 }
 
 function clearErrorOnType() {
-  if (errorEl.classList.contains('active')) {
+  if (errorEl.classList.contains('visible')) {
     resetFormState();
   }
 }
 
 function resetFormState() {
   errorEl.textContent = '';
-  errorEl.classList.remove('active');
+  errorEl.classList.remove('visible');
   input.classList.remove('invalid');
 }
 

@@ -142,6 +142,7 @@ body {
     align-items: center;
   }
 
+  /* Navigation layout */
   .nav-links {
     display: flex;
     flex-direction: row;
@@ -164,6 +165,7 @@ body {
     color: var(--very-dark-violet);
   }
 
+  
   .nav-buttons {
     flex-direction: row;
     width: auto;
@@ -329,7 +331,22 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  width: 100;
   margin-top: 0.5rem;
+}
+
+.shortener-form .btn-square:hover {
+  opacity: 0.7;
+  transform: translateY(-2px);
+}
+
+.shortener-form .btn-square:focus {
+  outline: 2px solid var(--dark-violet);
+  outline-offset: 2px;
+}
+
+.shortener-form .btn-square:active {
+  transform: translateY(0);
 }
 
 .input-group {
@@ -400,6 +417,39 @@ body {
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
+css
+/* ... (previous CSS remains unchanged until line ~400) ... */
+
+/* Results Section */
+.results-section {
+  padding: 0 1.5rem;
+  margin-bottom: 5rem;
+}
+
+/* ===== MOBILE-ONLY BUTTON STYLES (Added here) ===== */
+@media (max-width: 767px) {
+  /* Shorten It Button - Mobile */
+  .shortener-form .btn-square {
+    width: 100%; /* Full width */
+    justify-content: center; /* Center text */
+    padding: 0.75rem 1rem; /* Better padding */
+  }
+
+  /* Copy Button - Mobile */
+  .copy-btn {
+    width: 100%; /* Full width */
+    min-width: auto; /* Remove fixed width */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Improve mobile result card spacing */
+  .result-right {
+    gap: 1rem;
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -427,10 +477,13 @@ body {
   word-break: break-all;
 }
 
-/* Copy Button */
+/* Copy Button - Fixed Styles */
 .copy-btn {
   position: relative;
   overflow: hidden;
+  width: 100px;
+  min-width: 100px;
+  height: 48px;
   background: var(--cyan);
   color: white;
   border: none;
@@ -486,54 +539,6 @@ body {
 .no-results {
   text-align: center;
   color: var(--grayish-violet);
-}
-
-/* Mobile Button Overrides */
-@media (max-width: 767px) {
-  .shortener-form .btn-square {
-    width: 100%;
-    padding: 0.75rem 1rem;
-  }
-
-  .copy-btn {
-    width: 100%;
-    min-width: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .result-right {
-    gap: 1rem;
-  }
-}
-
-/* Desktop Button Overrides */
-@media (min-width: 768px) {
-  .shortener {
-    margin: 2rem 10% 0;
-    padding: 2.5rem;
-    background: var(--dark-violet) url('../images/bg-shorten-desktop.svg') no-repeat;
-    background-size: cover;
-    top: 0;
-  }
-
-  .shortener-form {
-    flex-direction: row;
-    align-items: stretch;
-  }
-
-  .shortener-form .btn-square {
-    width: auto;
-    min-width: 120px;
-    padding: 0 1.8rem;
-    margin-top: 0.5rem;
-  }
-
-  .copy-btn {
-    width: auto;
-    min-width: 100px;
-  }
 }
 
 /* Stats Section */
@@ -768,6 +773,66 @@ body {
     margin-left: 0;
   }
 
+  /* Shortener */
+  .shortener {
+    margin: 2rem 10% 0;
+    padding: 2.5rem;
+    background: var(--dark-violet) url('../images/bg-shorten-desktop.svg') no-repeat top 70% right;
+    background-size: cover;
+    background-position: center;
+    top: 0;
+  }
+
+  .shortener-form {
+    flex-direction: row;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  #url-input {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    min-width: 0;
+  }
+
+  .shortener-form button {
+    background: var(--cyan);
+    color: white;
+    border-radius: 5px;
+    padding: 0 1.8rem;
+    min-width: 120px;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .error-message {
+    display: none;
+    color: #f46363;
+    font-size: 0.75rem;
+    font-style: italic;
+    margin-top: 0.5rem;
+    text-align: left;
+  }
+
+  .error-message.active {
+    display: block;
+  }
+
+  .input-group {
+    position: relative;
+    flex-grow: 1;
+  }
+
+  #url-input.invalid {
+    border: 2px solid #f46363;
+    outline: none;
+  }
+
+  #url-input.invalid::placeholder {
+    color: #f46363;
+    opacity: 0.5;
+  }
+
   /* Results */
   .results-section {
     padding: 0 10%;
@@ -790,6 +855,11 @@ body {
     align-items: center;
     gap: 1.5rem;
     flex: 1;
+  }
+
+  .copy-btn {
+    width: auto;
+    min-width: 100px;
   }
 
   /* Stats */
